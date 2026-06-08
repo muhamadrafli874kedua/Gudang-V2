@@ -1,0 +1,17 @@
+{
+  "short_name": "StokGudangByMRafli",
+  "name": "Sistem Manajemen Stok Gudang",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2897/2897785.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#0D1117",
+  "theme_color": "#0D1117",
+  "display": "standalone",
+  "orientation": "portrait"
+}
