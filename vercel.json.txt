@@ -1,0 +1,13 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Link",
+          "value": "</manifest.json>; rel=\"manifest\""
+        }
+      ]
+    }
+  ]
+}
