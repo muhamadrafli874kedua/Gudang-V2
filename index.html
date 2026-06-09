@@ -1,0 +1,2281 @@
+Front end Final
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stok Gudang By Rafli</title>
+
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0D1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Stok Gudang">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .catch(err => console.log('SW gagal:', err));
+      });
+    }
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        showInstallBanner();
+      }
+    });
+
+    function showInstallBanner() {
+      if (document.getElementById('install-banner')) return;
+      const banner = document.createElement('div');
+      banner.id = 'install-banner';
+      banner.innerHTML = `
+        <div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+        background:#161b22;border:1px solid #30363d;border-radius:14px;
+        padding:14px 18px;display:flex;align-items:center;gap:12px;
+        z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,0.6);
+        max-width:340px;width:92%;font-family:sans-serif;">
+          <span style="font-size:26px">📦</span>
+          <div style="flex:1">
+            <div style="color:#ffffff;font-weight:600;font-size:14px;">Install Stok Gudang</div>
+            <div style="color:#8b949e;font-size:12px;margin-top:2px;">Tambahkan ke layar utama HP</div>
+          </div>
+          <button onclick="installPWA()" style="background:#238636;color:#fff;
+          border:none;border-radius:8px;padding:8px 14px;cursor:pointer;
+          font-size:13px;font-weight:600;">Install</button>
+          <button onclick="document.getElementById('install-banner').remove()"
+          style="background:none;border:none;color:#8b949e;cursor:pointer;
+          font-size:20px;line-height:1;padding:0 4px;">✕</button>
+        </div>`;
+      document.body.appendChild(banner);
+    }
+
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {
+          deferredPrompt = null;
+          const b = document.getElementById('install-banner');
+          if (b) b.remove();
+        });
+      }
+    }
+  </script>
+
+  <style>
+
+/* ============================================================
+   RESET & BASE
+============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0D1117;
+  --bg2:       #161B22;
+  --bg3:       #1C2128;
+  --border:    #30363D;
+  --border2:   #21262D;
+  --text:      #E6EDF3;
+  --text2:     #8B949E;
+  --text3:     #6E7681;
+  --accent:    #58A6FF;
+  --accent2:   #1F6FEB;
+  --green:     #3FB950;
+  --green-bg:  #0D2818;
+  --red:       #F85149;
+  --red-bg:    #2D1117;
+  --yellow:    #D29922;
+  --yellow-bg: #272115;
+  --orange:    #E3B341;
+  --purple:    #BC8CFF;
+  --font:      'IBM Plex Sans', sans-serif;
+  --mono:      'IBM Plex Mono', monospace;
+  --radius:    6px;
+  --radius-lg: 10px;
+  --shadow:    0 8px 24px rgba(1,4,9,.6);
+  --transition: 150ms ease;
+}
+
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   SCROLLBAR
+============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ============================================================
+   SIDEBAR
+============================================================ */
+#sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border2);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0;
+  height: 100vh;
+  z-index: 100;
+  transition: transform var(--transition);
+}
+
+.sidebar-logo {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border2);
+}
+.sidebar-logo .logo-icon {
+  width: 32px; height: 32px;
+  background: var(--accent2);
+  border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; margin-bottom: 10px;
+}
+.sidebar-logo h1 {
+  font-family: var(--mono);
+  font-size: 13px; font-weight: 600;
+  color: var(--text); letter-spacing: .5px;
+}
+.sidebar-logo p { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+.sidebar-nav { flex: 1; padding: 10px 8px; overflow-y: auto; }
+.nav-section-label {
+  font-size: 10px; font-weight: 600;
+  color: var(--text3); letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 8px 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 13px; font-weight: 400;
+  transition: background var(--transition), color var(--transition);
+  user-select: none;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: rgba(88,166,255,.1); color: var(--accent); font-weight: 500; }
+.nav-item .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff; font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 10px;
+  min-width: 18px; text-align: center;
+}
+.nav-badge.yellow { background: var(--yellow); color: #000; }
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border2);
+  font-size: 11px; color: var(--text3);
+}
+.sidebar-footer span { display: block; }
+
+/* ============================================================
+   MAIN CONTENT
+============================================================ */
+#main {
+  margin-left: 220px;
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   TOPBAR
+============================================================ */
+#topbar {
+  height: 52px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  position: sticky; top: 0; z-index: 50;
+}
+#topbar h2 {
+  font-family: var(--mono);
+  font-size: 13px; font-weight: 500;
+  color: var(--text2);
+}
+#topbar h2 span { color: var(--text); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+#sync-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text2);
+  font-size: 12px; font-family: var(--font);
+  cursor: pointer; transition: all var(--transition);
+}
+#sync-btn:hover { border-color: var(--accent); color: var(--accent); }
+#sync-btn svg { transition: transform 0.5s; }
+#sync-btn.spinning svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#conn-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text3);
+  transition: background var(--transition);
+}
+#conn-dot.ok  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+#conn-dot.err { background: var(--red); }
+
+/* ============================================================
+   PAGE CONTENT
+============================================================ */
+#content { flex: 1; padding: 24px; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ============================================================
+   CARDS & STATS
+============================================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  position: relative; overflow: hidden;
+  transition: border-color var(--transition);
+}
+.stat-card:hover { border-color: var(--border); }
+.stat-card[onclick] { cursor: pointer; }
+.stat-card[onclick]:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(88,166,255,.15); }
+.stat-card[onclick]:active { transform: translateY(0); }
+.stat-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+}
+.stat-card.blue::before   { background: var(--accent); }
+.stat-card.green::before  { background: var(--green); }
+.stat-card.red::before    { background: var(--red); }
+.stat-card.yellow::before { background: var(--yellow); }
+.stat-card.orange::before { background: var(--orange); }
+.stat-card.purple::before { background: var(--purple); }
+
+.stat-label {
+  font-size: 11px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .8px;
+  font-weight: 500; margin-bottom: 8px;
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size: 26px; font-weight: 600;
+  color: var(--text); line-height: 1;
+}
+.stat-value.red    { color: var(--red); }
+.stat-value.yellow { color: var(--yellow); }
+.stat-value.green  { color: var(--green); }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
+
+/* ============================================================
+   SECTION / CARD
+============================================================ */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.card-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; gap: 10px;
+}
+.card-title {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  font-family: var(--mono);
+}
+.card-subtitle { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.card-actions { margin-left: auto; display: flex; gap: 8px; }
+.card-body { padding: 16px; }
+
+/* ============================================================
+   GRID LAYOUT
+============================================================ */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   TABLE
+============================================================ */
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12.5px;
+}
+th {
+  background: var(--bg3);
+  color: var(--text3); font-weight: 500;
+  font-size: 11px; letter-spacing: .5px;
+  text-transform: uppercase;
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border2);
+  white-space: nowrap;
+}
+td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border2);
+  color: var(--text2);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,.02); }
+.mono { font-family: var(--mono); font-size: 12px; }
+
+/* ============================================================
+   BADGES
+============================================================ */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 500;
+  white-space: nowrap;
+}
+.badge-green  { background: var(--green-bg);  color: var(--green); }
+.badge-red    { background: var(--red-bg);    color: var(--red); }
+.badge-yellow { background: var(--yellow-bg); color: var(--orange); }
+.badge-blue   { background: rgba(88,166,255,.1); color: var(--accent); }
+.badge-gray   { background: var(--bg3); color: var(--text3); }
+
+/* ============================================================
+   BUTTONS
+============================================================ */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 12.5px; font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--accent2); border-color: var(--accent2);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+.btn-success {
+  background: rgba(63,185,80,.15); border-color: rgba(63,185,80,.3);
+  color: var(--green);
+}
+.btn-success:hover { background: rgba(63,185,80,.25); }
+.btn-danger {
+  background: rgba(248,81,73,.15); border-color: rgba(248,81,73,.3);
+  color: var(--red);
+}
+.btn-danger:hover { background: rgba(248,81,73,.25); }
+.btn-ghost {
+  background: transparent; border-color: var(--border);
+  color: var(--text2);
+}
+.btn-ghost:hover { border-color: var(--text2); color: var(--text); }
+.btn-sm { padding: 4px 10px; font-size: 11.5px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ============================================================
+   FORMS
+============================================================ */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  display: block;
+  font-size: 11px; font-weight: 500; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .6px;
+  margin-bottom: 5px;
+}
+.form-control {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 13px; font-family: var(--font);
+  transition: border-color var(--transition);
+  outline: none;
+}
+.form-control:focus { border-color: var(--accent); }
+.form-control::placeholder { color: var(--text3); }
+select.form-control { cursor: pointer; }
+textarea.form-control { resize: vertical; min-height: 70px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+@media(max-width:600px) { .form-row, .form-row.cols3 { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   MODAL
+============================================================ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(1,4,9,.8);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 100%; max-width: 560px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow);
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(-12px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; gap: 10px;
+}
+.modal-title { font-size: 14px; font-weight: 600; font-family: var(--mono); }
+.modal-close {
+  margin-left: auto; background: none; border: none;
+  color: var(--text3); cursor: pointer; padding: 4px;
+  border-radius: var(--radius); transition: color var(--transition);
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border2);
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+
+/* ============================================================
+   SEARCH BAR
+============================================================ */
+.search-wrap {
+  position: relative; flex: 1; max-width: 320px;
+}
+.search-wrap input {
+  width: 100%; padding: 7px 10px 7px 32px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
+  font-size: 12.5px; font-family: var(--font); outline: none;
+  transition: border-color var(--transition);
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap svg {
+  position: absolute; left: 9px; top: 50%;
+  transform: translateY(-50%); color: var(--text3);
+  pointer-events: none;
+}
+
+/* ============================================================
+   TOAST
+============================================================ */
+#toast-container {
+  position: fixed; bottom: 20px; right: 20px;
+  z-index: 999; display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  font-size: 12.5px; font-weight: 500;
+  border: 1px solid;
+  animation: toastIn .2s ease;
+  max-width: 320px;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: none; }
+}
+.toast-success { background: var(--green-bg); border-color: rgba(63,185,80,.4); color: var(--green); }
+.toast-error   { background: var(--red-bg);   border-color: rgba(248,81,73,.4);  color: var(--red); }
+.toast-info    { background: rgba(88,166,255,.1); border-color: rgba(88,166,255,.3); color: var(--accent); }
+
+/* ============================================================
+   SCAN RESULT BOX
+============================================================ */
+.scan-result {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); padding: 16px;
+  margin-top: 16px; display: none;
+}
+.scan-result.visible { display: block; }
+.scan-result-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; margin-bottom: 12px;
+}
+.scan-item-name { font-size: 16px; font-weight: 600; color: var(--text); }
+.scan-item-code { font-family: var(--mono); font-size: 12px; color: var(--text3); margin-top: 2px; }
+.scan-meta {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px; margin-top: 12px;
+}
+.scan-meta-item label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; }
+.scan-meta-item p { font-size: 13px; color: var(--text); margin-top: 2px; font-weight: 500; }
+.scan-meta-item p.mono { font-family: var(--mono); }
+.batch-list { margin-top: 14px; }
+.batch-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; background: var(--bg2);
+  border-radius: var(--radius); margin-bottom: 6px;
+  border: 1px solid var(--border2);
+  font-size: 12.5px;
+}
+
+/* ============================================================
+   CHART
+============================================================ */
+.chart-wrap { position: relative; height: 200px; }
+
+/* ============================================================
+   EMPTY STATE
+============================================================ */
+.empty-state {
+  text-align: center; padding: 40px 20px;
+  color: var(--text3);
+}
+.empty-state svg { margin: 0 auto 12px; opacity: .3; }
+.empty-state p { font-size: 13px; }
+
+/* ============================================================
+   LOADER
+============================================================ */
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+.page-loader {
+  display: flex; align-items: center; justify-content: center;
+  padding: 60px;
+}
+
+/* ============================================================
+   MISC
+============================================================ */
+.text-right   { text-align: right; }
+.text-center  { text-align: center; }
+.text-muted   { color: var(--text3); }
+.text-green   { color: var(--green); }
+.text-red     { color: var(--red); }
+.text-yellow  { color: var(--yellow); }
+.text-accent  { color: var(--accent); }
+.fw-600       { font-weight: 600; }
+.mt-16        { margin-top: 16px; }
+.mt-24        { margin-top: 24px; }
+.mb-16        { margin-bottom: 16px; }
+.flex         { display: flex; align-items: center; }
+.gap-8        { gap: 8px; }
+.gap-12       { gap: 12px; }
+.flex-1       { flex: 1; }
+.divider      { border: none; border-top: 1px solid var(--border2); margin: 16px 0; }
+
+/* ============================================================
+   HAMBURGER (mobile)
+============================================================ */
+#hamburger {
+  display: none; background: none; border: none;
+  color: var(--text2); cursor: pointer; padding: 4px;
+}
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.5); z-index: 99;
+}
+
+@media(max-width: 768px) {
+  #sidebar {
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+  }
+  #sidebar.open { transform: translateX(0); }
+  #main { margin-left: 0; }
+  #hamburger { display: flex; }
+  .sidebar-overlay.open { display: block; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   FILTER BAR
+============================================================ */
+.filter-bar {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 14px;
+}
+.filter-bar select, .filter-bar input[type=date] {
+  padding: 6px 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text);
+  font-size: 12px; font-family: var(--font); outline: none;
+}
+.filter-bar select:focus, .filter-bar input:focus { border-color: var(--accent); }
+
+/* ============================================================
+   PAGINATION
+============================================================ */
+.pagination {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border2);
+  justify-content: flex-end;
+  font-size: 12px; color: var(--text3);
+}
+.pagination button {
+  padding: 4px 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text2);
+  font-size: 11.5px; cursor: pointer;
+  transition: all var(--transition);
+}
+.pagination button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.pagination button.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+.pagination button:disabled { opacity: .3; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/>
+        <path d="M3 10h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10z"/>
+        <path d="M12 10v12"/><path d="M8 10v4"/><path d="M16 10v4"/>
+      </svg>
+    </div>
+    <h1>STOK GUDANG</h1>
+    <p>by M Rafli</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Utama</div>
+    <button class="nav-item active" onclick="navigate('dashboard')" data-page="dashboard">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      Dashboard
+    </button>
+    <button class="nav-item" onclick="navigate('scan')" data-page="scan">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+        <line x1="7" y1="12" x2="17" y2="12"/>
+      </svg>
+      Scan Barcode
+    </button>
+
+    <div class="nav-section-label">Transaksi</div>
+    <button class="nav-item" onclick="navigate('masuk')" data-page="masuk">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14"/><path d="m7 10 5-5 5 5"/>
+        <path d="M5 19h14"/>
+      </svg>
+      Barang Masuk
+    </button>
+    <button class="nav-item" onclick="navigate('keluar')" data-page="keluar">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 19V5"/><path d="m17 14-5 5-5-5"/>
+        <path d="M5 5h14"/>
+      </svg>
+      Barang Keluar
+    </button>
+    <button class="nav-item" onclick="navigate('history')" data-page="history">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+      </svg>
+      Riwayat
+    </button>
+
+    <div class="nav-section-label">Inventaris</div>
+    <button class="nav-item" onclick="navigate('stok')" data-page="stok">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="2"/>
+        <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
+      </svg>
+      Semua Stok
+      <span class="nav-badge yellow" id="nb-low" style="display:none">0</span>
+    </button>
+    <button class="nav-item" onclick="navigate('tambah')" data-page="tambah">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      Tambah Barang
+    </button>
+
+    <div class="nav-section-label">Sistem</div>
+    <button class="nav-item" onclick="navigate('settings')" data-page="settings">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      Pengaturan
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <span id="last-sync-time">Belum disinkronkan</span>
+    <span style="margin-top:3px">Stok Gudang v1.0</span>
+  </div>
+</aside>
+
+<!-- MOBILE OVERLAY -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- TOPBAR -->
+  <header id="topbar">
+    <button id="hamburger" onclick="toggleSidebar()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <h2 id="page-title"><span>Dashboard</span></h2>
+    <div class="topbar-right">
+      <div id="conn-dot" title="Status koneksi"></div>
+      <button id="sync-btn" onclick="syncAll()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 16h5v5"/>
+        </svg>
+        Sinkronkan
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ============================
+         PAGE: DASHBOARD
+    ============================= -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card blue" onclick="navigate('stok')">
+          <div class="stat-label">Total Item</div>
+          <div class="stat-value" id="s-total-item">—</div>
+          <div class="stat-sub">↗ semua stok</div>
+        </div>
+        <div class="stat-card green" onclick="navigate('stok')">
+          <div class="stat-label">Total Stok</div>
+          <div class="stat-value" id="s-total-stok">—</div>
+          <div class="stat-sub">↗ semua stok</div>
+        </div>
+        <div class="stat-card green" onclick="navigate('masuk')">
+          <div class="stat-label">Masuk Hari Ini</div>
+          <div class="stat-value green" id="s-masuk">—</div>
+          <div class="stat-sub">↗ catat masuk</div>
+        </div>
+        <div class="stat-card red" onclick="navigate('keluar')">
+          <div class="stat-label">Keluar Hari Ini</div>
+          <div class="stat-value red" id="s-keluar">—</div>
+          <div class="stat-sub">↗ catat keluar</div>
+        </div>
+        <div class="stat-card yellow" onclick="navigateStokFilter('low')">
+          <div class="stat-label">Stok Rendah</div>
+          <div class="stat-value yellow" id="s-low">—</div>
+          <div class="stat-sub">↗ lihat stok rendah</div>
+        </div>
+        <div class="stat-card orange" onclick="navigateStokFilter('exp')">
+          <div class="stat-label">Hampir Exp</div>
+          <div class="stat-value" id="s-exp" style="color:var(--orange)">—</div>
+          <div class="stat-sub">↗ hampir kadaluarsa</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Grafik 7 Hari Terakhir</div>
+              <div class="card-subtitle">Pergerakan masuk &amp; keluar</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap"><canvas id="chart-weekly"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Perhatian</div>
+              <div class="card-subtitle">Item yang perlu ditindaklanjuti</div>
+            </div>
+          </div>
+          <div class="card-body" id="alert-list">
+            <div class="page-loader"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================
+         PAGE: SCAN
+    ============================= -->
+    <div class="page" id="page-scan">
+      <div class="card" style="max-width:580px">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Scan / Cari Barcode</div>
+            <div class="card-subtitle">Cari barang berdasarkan kode barcode</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="flex gap-8">
+            <input class="form-control flex-1" type="text" id="scan-input"
+              placeholder="Ketik atau scan barcode…" autocomplete="off"
+              onkeydown="if(event.key==='Enter') doScan()"/>
+            <button class="btn btn-ghost" onclick="openCamera()" title="Scan kamera" style="padding:0 12px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+            <button class="btn btn-primary" onclick="doScan()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              Cari
+            </button>
+          </div>
+          <div class="scan-result" id="scan-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================
+         PAGE: BARANG MASUK
+    ============================= -->
+    <div class="page" id="page-masuk">
+      <div class="card" style="max-width:580px">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Barang Masuk</div>
+            <div class="card-subtitle">Catat penerimaan barang ke gudang</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Barcode *</label>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input class="form-control flex-1" id="in-barcode" placeholder="Scan / ketik barcode" oninput="autoFillMasuk()"/>
+                <button class="btn btn-ghost" onclick="openCameraFor('in-barcode', autoFillMasuk)" title="Scan kamera" style="padding:0 10px; flex-shrink:0;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama Barang *</label>
+              <input class="form-control" id="in-nama" placeholder="Nama barang"/>
+            </div>
+          </div>
+          <div class="form-row cols3">
+            <div class="form-group">
+              <label class="form-label">Qty *</label>
+              <input class="form-control" id="in-qty" type="number" min="0" placeholder="0"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stok Awal</label>
+              <input class="form-control" id="in-stokawal" type="number" min="0" placeholder="0"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">No. Batch</label>
+              <input class="form-control" id="in-batch" placeholder="contoh: B001"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Kadaluarsa</label>
+              <input class="form-control" id="in-exp" type="date"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Posisi Rak</label>
+              <input class="form-control" id="in-posisi" placeholder="A-1"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Kategori</label>
+              <input class="form-control" id="in-kategori" placeholder="Elektronik, Makanan, dll"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tanggal</label>
+              <input class="form-control" id="in-tanggal" type="datetime-local"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Catatan</label>
+            <textarea class="form-control" id="in-catatan" placeholder="Opsional…"></textarea>
+          </div>
+          <div class="flex gap-8" style="justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="resetMasuk()">Reset</button>
+            <button class="btn btn-success" id="btn-masuk" onclick="submitMasuk()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14"/><path d="m7 10 5-5 5 5"/>
+              </svg>
+              Simpan Masuk
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================
+         PAGE: BARANG KELUAR
+    ============================= -->
+    <div class="page" id="page-keluar">
+      <div class="card" style="max-width:580px">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Barang Keluar</div>
+            <div class="card-subtitle">Catat pengeluaran barang dari gudang (FIFO otomatis)</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Barcode *</label>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input class="form-control flex-1" id="out-barcode" placeholder="Scan / ketik barcode" oninput="autoFillKeluar()"/>
+                <button class="btn btn-ghost" onclick="openCameraFor('out-barcode', autoFillKeluar)" title="Scan kamera" style="padding:0 10px; flex-shrink:0;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama Barang</label>
+              <input class="form-control" id="out-nama" placeholder="Terisi otomatis" readonly style="opacity:.7"/>
+            </div>
+          </div>
+          <div class="form-row cols3">
+            <div class="form-group">
+              <label class="form-label">Qty *</label>
+              <input class="form-control" id="out-qty" type="number" min="1" placeholder="0"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Pilih Batch</label>
+              <select class="form-control" id="out-batch">
+                <option value="">Auto (FIFO)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tanggal</label>
+              <input class="form-control" id="out-tanggal" type="datetime-local"/>
+            </div>
+          </div>
+          <div class="form-group" id="out-stok-info" style="display:none">
+            <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--text2)">
+              <span id="out-stok-text"></span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Catatan</label>
+            <textarea class="form-control" id="out-catatan" placeholder="Opsional…"></textarea>
+          </div>
+          <div class="flex gap-8" style="justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="resetKeluar()">Reset</button>
+            <button class="btn btn-danger" id="btn-keluar" onclick="submitKeluar()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 19V5"/><path d="m17 14-5 5-5-5"/>
+              </svg>
+              Simpan Keluar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================
+         PAGE: RIWAYAT
+    ============================= -->
+    <div class="page" id="page-history">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Riwayat Transaksi</div>
+            <div class="card-subtitle">Log masuk &amp; keluar barang</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm" onclick="exportHistory()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="filter-bar">
+            <div class="search-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input id="hist-search" placeholder="Cari barcode atau nama…" oninput="renderHistory()"/>
+            </div>
+            <select class="form-control" id="hist-filter" onchange="renderHistory()" style="width:auto">
+              <option value="">Semua Tipe</option>
+              <option value="MASUK">Masuk</option>
+              <option value="KELUAR">Keluar</option>
+            </select>
+            <input type="date" id="hist-start" onchange="loadHistory()"/>
+            <input type="date" id="hist-end"   onchange="loadHistory()"/>
+            <button class="btn btn-ghost btn-sm" onclick="loadHistory()">Filter</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Tipe</th>
+                  <th>Barcode</th>
+                  <th>Nama Barang</th>
+                  <th>Qty</th>
+                  <th>Batch</th>
+                  <th>Catatan</th>
+                </tr>
+              </thead>
+              <tbody id="hist-body">
+                <tr><td colspan="7" class="text-center text-muted" style="padding:32px">
+                  <div class="spinner" style="margin:0 auto 8px"></div><br>Memuat…
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="hist-pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================
+         PAGE: SEMUA STOK
+    ============================= -->
+    <div class="page" id="page-stok">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Semua Stok</div>
+            <div class="card-subtitle" id="stok-count-label">Memuat data…</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm" onclick="exportStok()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export CSV
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="loadAllStock()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="filter-bar">
+            <div class="search-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input id="stok-search" placeholder="Cari nama atau barcode…" oninput="renderStok()"/>
+            </div>
+            <select class="form-control" id="stok-filter" onchange="renderStok()" style="width:auto">
+              <option value="">Semua Status</option>
+              <option value="low">Stok Rendah (≤3)</option>
+              <option value="exp">Hampir Kadaluarsa</option>
+              <option value="expired">Sudah Kadaluarsa</option>
+            </select>
+            <select class="form-control" id="stok-kategori" onchange="renderStok()" style="width:auto">
+              <option value="">Semua Kategori</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Barcode</th>
+                  <th>Nama Barang</th>
+                  <th>Stok</th>
+                  <th>Batch</th>
+                  <th>Kadaluarsa</th>
+                  <th>Posisi Rak</th>
+                  <th>Kategori</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="stok-body">
+                <tr><td colspan="8" class="text-center text-muted" style="padding:32px">
+                  <div class="spinner" style="margin:0 auto 8px"></div><br>Memuat…
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="stok-pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================
+         PAGE: TAMBAH BARANG
+    ============================= -->
+    <div class="page" id="page-tambah">
+      <div class="card" style="max-width:540px">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Tambah Barang Baru</div>
+            <div class="card-subtitle">Daftarkan item baru ke master stok</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Barcode *</label>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input class="form-control flex-1" id="add-barcode" placeholder="Kode barcode unik"/>
+                <button class="btn btn-ghost" onclick="openCameraFor('add-barcode', null)" title="Scan kamera" style="padding:0 10px; flex-shrink:0;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nama Barang *</label>
+              <input class="form-control" id="add-nama" placeholder="Nama lengkap barang"/>
+            </div>
+          </div>
+          <div class="form-row cols3">
+            <div class="form-group">
+              <label class="form-label">Stok Awal</label>
+              <input class="form-control" id="add-qty" type="number" min="0" placeholder="0"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">No. Batch</label>
+              <input class="form-control" id="add-batch" placeholder="B001"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Posisi Rak</label>
+              <input class="form-control" id="add-posisi" placeholder="A-1"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Kadaluarsa</label>
+              <input class="form-control" id="add-exp" type="date"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori</label>
+              <input class="form-control" id="add-kategori" placeholder="Elektronik, Makanan…"/>
+            </div>
+          </div>
+          <div class="flex gap-8" style="justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="resetTambah()">Reset</button>
+            <button class="btn btn-primary" onclick="submitTambah()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+              </svg>
+              Tambah Barang
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================
+         PAGE: SETTINGS
+    ============================= -->
+    <div class="page" id="page-settings">
+      <div style="max-width:560px;display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Notifikasi Telegram</div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Bot Token</label>
+              <input class="form-control" id="set-token" type="password" placeholder="Masukkan Telegram Bot Token"/>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Chat ID</label>
+                <input class="form-control" id="set-chatid" placeholder="Contoh: 123456789"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Jam Laporan (WIB)</label>
+                <input class="form-control" id="set-hour" type="number" min="0" max="23" placeholder="7"/>
+              </div>
+            </div>
+            <div class="flex gap-8" style="justify-content:flex-end">
+              <button class="btn btn-ghost btn-sm" onclick="sendWelcome()">Test Kirim</button>
+              <button class="btn btn-primary btn-sm" onclick="saveSettings()">Simpan</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Threshold Kadaluarsa</div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Peringatan Kadaluarsa (hari sebelumnya)</label>
+              <input class="form-control" id="set-expdays" type="number" min="1" max="365" placeholder="30" style="max-width:160px"/>
+            </div>
+            <div class="flex gap-8" style="justify-content:flex-end">
+              <button class="btn btn-primary btn-sm" onclick="saveSettings()">Simpan</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Laporan Manual</div>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12.5px;color:var(--text3);margin-bottom:14px">
+              Kirim laporan harian ke Telegram sekarang tanpa menunggu jadwal otomatis.
+            </p>
+            <button class="btn btn-ghost" onclick="sendDailyReport()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              Kirim Laporan Sekarang
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Tentang</div>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12.5px;color:var(--text3);line-height:1.7">
+              <b style="color:var(--text)">Stok Gudang v1.0</b><br>
+              Sistem manajemen gudang berbasis Google Apps Script.<br>
+              Database: Google Sheets · Frontend: HTML/CSS/JS · Backend: GAS<br><br>
+              by M Rafli
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ============================
+     MODAL: EDIT ITEM
+============================= -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit Barang</div>
+      <button class="modal-close" onclick="closeModal('modal-edit')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-barcode-orig"/>
+      <input type="hidden" id="edit-batch-orig"/>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Barcode</label>
+          <input class="form-control" id="edit-barcode" readonly style="opacity:.6"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Barang</label>
+          <input class="form-control" id="edit-nama"/>
+        </div>
+      </div>
+      <div class="form-row cols3">
+        <div class="form-group">
+          <label class="form-label">Stok Awal</label>
+          <input class="form-control" id="edit-stokawal" type="number"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">No. Batch</label>
+          <input class="form-control" id="edit-batch"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Posisi Rak</label>
+          <input class="form-control" id="edit-posisi"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Kadaluarsa</label>
+          <input class="form-control" id="edit-exp" type="date"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategori</label>
+          <input class="form-control" id="edit-kategori"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit')">Batal</button>
+      <button class="btn btn-primary" onclick="submitEdit()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================
+     MODAL: KONFIRMASI HAPUS
+============================= -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--red)">Hapus Barang</div>
+      <button class="modal-close" onclick="closeModal('modal-delete')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2)" id="delete-confirm-text">Yakin ingin menghapus barang ini?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-delete')">Batal</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Ya, Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================ -->
+<script>
+// ---- GANTI URL INI DENGAN URL DEPLOYMENT GAS ANDA ----
+const API = 'https://script.google.com/macros/s/AKfycbwoD80Dnrck7VOYW5OYasauP2AwDMC5zjJ5sT0fbkqSl7Yjz2C7R8NfLMFSbh8_xGBq/exec'
+
+// ---- State ----
+let allStockData   = []
+let allHistoryData = []
+let weeklyChart    = null
+let deleteTarget   = null
+
+// Pagination state
+const PAGE_SIZE = 50
+let histPage    = 1
+let stokPage    = 1
+let histFiltered = []
+let stokFiltered = []
+
+// ---- API ----
+async function api(method, params) {
+  try {
+    let res
+    if (method === 'GET') {
+      const q = new URLSearchParams(params).toString()
+      res = await fetch(`${API}?${q}`)
+    } else {
+      res = await fetch(API, {
+        method: 'POST',
+        body: JSON.stringify(params),
+      })
+    }
+    return await res.json()
+  } catch (e) {
+    return { error: e.message }
+  }
+}
+
+// ---- TOAST ----
+function toast(msg, type='info') {
+  const el = document.createElement('div')
+  el.className = `toast toast-${type}`
+  el.textContent = msg
+  document.getElementById('toast-container').appendChild(el)
+  setTimeout(() => el.remove(), 3200)
+}
+
+// ---- NAVIGATION ----
+const PAGE_TITLES = {
+  dashboard: 'Dashboard',
+  scan:      'Scan Barcode',
+  masuk:     'Barang Masuk',
+  keluar:    'Barang Keluar',
+  history:   'Riwayat Transaksi',
+  stok:      'Semua Stok',
+  tambah:    'Tambah Barang',
+  settings:  'Pengaturan',
+}
+
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.getElementById('page-' + page).classList.add('active')
+  document.querySelector(`[data-page="${page}"]`).classList.add('active')
+  document.getElementById('page-title').innerHTML = `<span>${PAGE_TITLES[page]}</span>`
+  closeSidebar()
+  if (page === 'dashboard') loadDashboard()
+  if (page === 'stok')      loadAllStock()
+  if (page === 'history')   loadHistory()
+  if (page === 'settings')  loadSettings()
+  if (page === 'masuk' || page === 'keluar') {
+    const now = new Date()
+    const local = new Date(now - now.getTimezoneOffset() * 60000).toISOString().slice(0,16)
+    if (page === 'masuk') document.getElementById('in-tanggal').value = local
+    else                  document.getElementById('out-tanggal').value = local
+  }
+}
+
+// ---- NAVIGATE WITH FILTER ----
+function navigateStokFilter(filter) {
+  navigate('stok')
+  setTimeout(() => {
+    const sel = document.getElementById('stok-filter')
+    if (sel) { sel.value = filter; renderStok() }
+  }, 700)
+}
+
+// ---- SIDEBAR (mobile) ----
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open')
+  document.getElementById('sidebar-overlay').classList.toggle('open')
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open')
+  document.getElementById('sidebar-overlay').classList.remove('open')
+}
+
+// ---- MODAL ----
+function openModal(id)  { document.getElementById(id).classList.add('open') }
+function closeModal(id) { document.getElementById(id).classList.remove('open') }
+
+// ---- SYNC ALL ----
+async function syncAll() {
+  const btn = document.getElementById('sync-btn')
+  btn.classList.add('spinning')
+  const page = document.querySelector('.page.active').id.replace('page-','')
+  if (page === 'dashboard') await loadDashboard()
+  else if (page === 'stok') await loadAllStock()
+  else if (page === 'history') await loadHistory()
+  else await loadDashboard()
+  btn.classList.remove('spinning')
+}
+
+// ---- PING ----
+async function checkConn() {
+  const dot = document.getElementById('conn-dot')
+  const r = await api('GET', { action: 'ping' })
+  if (r && r.status === 'ok') dot.className = 'ok'
+  else dot.className = 'err'
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+async function loadDashboard() {
+  const r = await api('GET', { action: 'getStats' })
+  if (r.error) { toast('Gagal memuat statistik: ' + r.error, 'error'); return }
+
+  document.getElementById('s-total-item').textContent = r.totalItem  ?? '—'
+  document.getElementById('s-total-stok').textContent = r.totalStok  ?? '—'
+  document.getElementById('s-masuk').textContent      = r.todayMasuk ?? '—'
+  document.getElementById('s-keluar').textContent     = r.todayKeluar ?? '—'
+  document.getElementById('s-low').textContent        = r.lowStock    ?? '—'
+  document.getElementById('s-exp').textContent        = r.expiringSoon ?? '—'
+
+  const nbLow = document.getElementById('nb-low')
+  if (r.lowStock > 0) { nbLow.textContent = r.lowStock; nbLow.style.display = '' }
+  else nbLow.style.display = 'none'
+
+  renderWeeklyChart(r.weeklyChart || [])
+  renderAlertList(r)
+  document.getElementById('last-sync-time').textContent = 'Sync: ' + new Date().toLocaleTimeString('id-ID')
+}
+
+function renderWeeklyChart(data) {
+  const ctx = document.getElementById('chart-weekly').getContext('2d')
+  if (weeklyChart) weeklyChart.destroy()
+  weeklyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.date),
+      datasets: [
+        {
+          label: 'Masuk',
+          data: data.map(d => d.masuk),
+          backgroundColor: 'rgba(63,185,80,.7)',
+          borderRadius: 3, borderSkipped: false,
+        },
+        {
+          label: 'Keluar',
+          data: data.map(d => d.keluar),
+          backgroundColor: 'rgba(248,81,73,.6)',
+          borderRadius: 3, borderSkipped: false,
+        },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#8B949E', font: { size: 11 }, boxWidth: 10 } }
+      },
+      scales: {
+        x: { ticks: { color: '#6E7681', font: { size: 10 } }, grid: { color: '#21262D' } },
+        y: { ticks: { color: '#6E7681', font: { size: 10 } }, grid: { color: '#21262D' }, beginAtZero: true },
+      }
+    }
+  })
+}
+
+function renderAlertList(r) {
+  const el = document.getElementById('alert-list')
+  const items = []
+  if (r.lowStock > 0) items.push({
+    icon:'🔴', label:`${r.lowStock} item stok rendah (≤3 unit)`, color:'var(--red)'
+  })
+  if (r.expiringSoon > 0) items.push({
+    icon:'🟡', label:`${r.expiringSoon} item hampir kadaluarsa`, color:'var(--orange)'
+  })
+  if (r.expired > 0) items.push({
+    icon:'⚫', label:`${r.expired} item sudah kadaluarsa`, color:'var(--text3)'
+  })
+
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <p>Semua stok dalam kondisi aman</p>
+    </div>`
+    return
+  }
+
+  el.innerHTML = items.map(it => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2)">
+      <span style="font-size:16px">${it.icon}</span>
+      <span style="font-size:12.5px;color:${it.color};font-weight:500">${it.label}</span>
+    </div>
+  `).join('') + `<div style="margin-top:12px">
+    <button class="btn btn-ghost btn-sm" onclick="navigate('stok')">Lihat Detail Stok →</button>
+  </div>`
+}
+
+// ============================================================
+// SCAN
+// ============================================================
+async function doScan() {
+  const bc = document.getElementById('scan-input').value.trim()
+  if (!bc) { toast('Masukkan barcode terlebih dahulu', 'error'); return }
+  const r  = await api('GET', { action: 'search', barcode: bc })
+  const el = document.getElementById('scan-result')
+
+  if (!r.found || !r.batches || !r.batches.length) {
+    el.className = 'scan-result visible'
+    el.innerHTML = `<p class="text-muted" style="font-size:13px">❌ Barcode <b>${bc}</b> tidak ditemukan di master stok.</p>
+    <div style="margin-top:10px">
+      <button class="btn btn-primary btn-sm" onclick="navigate('tambah');document.getElementById('add-barcode').value='${bc}'">
+        + Tambah sebagai barang baru
+      </button>
+    </div>`
+    return
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0)
+  const batchRows = r.batches.map(b => {
+    const isExp     = b.exp && new Date(b.exp) < today
+    const isNearExp = b.exp && !isExp && (new Date(b.exp) - today) / 86400000 <= 30
+    return `<div class="batch-row">
+      <span class="mono">${b.batch || '—'}</span>
+      <span>Stok: <b class="${Number(b.qty) <= 3 ? 'text-red' : 'text-green'}">${b.qty}</b></span>
+      <span>${b.exp ? `<span class="${isExp ? 'text-muted' : isNearExp ? 'text-yellow' : 'text-green'}">${b.exp}</span>` : '—'}</span>
+      <span class="text-muted mono" style="font-size:11px">${b.posisi || '—'}</span>
+    </div>`
+  }).join('')
+
+  el.className = 'scan-result visible'
+  el.innerHTML = `
+    <div class="scan-result-header">
+      <div>
+        <div class="scan-item-name">${r.nama}</div>
+        <div class="scan-item-code mono">${r.barcode}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="stat-value ${Number(r.qty) <= 3 ? 'red' : Number(r.qty) <= 10 ? 'yellow' : 'green'}" style="font-size:28px">${r.qty}</div>
+        <div class="text-muted" style="font-size:11px">total unit</div>
+      </div>
+    </div>
+    <div class="scan-meta">
+      <div class="scan-meta-item"><label>Posisi Rak</label><p>${r.posisi || '—'}</p></div>
+      <div class="scan-meta-item"><label>Kategori</label><p>${r.kategori || '—'}</p></div>
+      <div class="scan-meta-item"><label>Kadaluarsa</label><p>${r.exp || '—'}</p></div>
+      <div class="scan-meta-item"><label>Jumlah Batch</label><p>${r.batches.length}</p></div>
+    </div>
+    ${r.batches.length > 1 ? `<div class="batch-list">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">Detail per Batch</div>
+      ${batchRows}
+    </div>` : ''}
+    <div class="flex gap-8 mt-16">
+      <button class="btn btn-success btn-sm" onclick="navigate('masuk');document.getElementById('in-barcode').value='${r.barcode}';autoFillMasuk()">+ Masuk</button>
+      <button class="btn btn-danger btn-sm"  onclick="navigate('keluar');document.getElementById('out-barcode').value='${r.barcode}';autoFillKeluar()">− Keluar</button>
+    </div>
+  `
+}
+
+// ============================================================
+// BARANG MASUK
+// ============================================================
+let _autoFillTimer = null
+async function autoFillMasuk() {
+  clearTimeout(_autoFillTimer)
+  _autoFillTimer = setTimeout(async () => {
+    const bc = document.getElementById('in-barcode').value.trim()
+    if (!bc) return
+    const r = await api('GET', { action: 'search', barcode: bc })
+    if (r.found) {
+      document.getElementById('in-nama').value     = r.nama     || ''
+      document.getElementById('in-posisi').value   = r.posisi   || ''
+      document.getElementById('in-kategori').value = r.kategori || ''
+    }
+  }, 500)
+}
+
+function resetMasuk() {
+  ['in-barcode','in-nama','in-qty','in-stokawal','in-batch','in-posisi','in-kategori','in-catatan','in-exp'].forEach(id => {
+    document.getElementById(id).value = ''
+  })
+}
+
+async function submitMasuk() {
+  const barcode = document.getElementById('in-barcode').value.trim()
+  const nama    = document.getElementById('in-nama').value.trim()
+  const qty     = document.getElementById('in-qty').value.trim()
+  if (!barcode || !nama || !qty || Number(qty) <= 0) {
+    toast('Barcode, nama, dan qty (>0) wajib diisi', 'error'); return
+  }
+
+  const btn = document.getElementById('btn-masuk')
+  btn.disabled = true
+  const data = {
+    action: 'stockIn',
+    barcode, nama, qty: Number(qty),
+    exp:      document.getElementById('in-exp').value || '',
+    posisi:   document.getElementById('in-posisi').value.trim(),
+    catatan:  document.getElementById('in-catatan').value.trim(),
+    tanggal:  document.getElementById('in-tanggal').value || new Date().toISOString(),
+    kategori: document.getElementById('in-kategori').value.trim(),
+    stokAwal: Number(document.getElementById('in-stokawal').value) || 0,
+    batch:    document.getElementById('in-batch').value.trim(),
+  }
+
+  const r = await api('POST', data)
+  btn.disabled = false
+  if (r.success) { toast(`✓ Barang masuk disimpan (${qty} unit)`, 'success'); resetMasuk() }
+  else toast('Gagal: ' + (r.error || 'Unknown'), 'error')
+}
+
+// ============================================================
+// BARANG KELUAR
+// ============================================================
+let _outFillTimer = null
+async function autoFillKeluar() {
+  clearTimeout(_outFillTimer)
+  _outFillTimer = setTimeout(async () => {
+    const bc = document.getElementById('out-barcode').value.trim()
+    if (!bc) return
+    const r   = await api('GET', { action: 'search', barcode: bc })
+    const sel = document.getElementById('out-batch')
+    const info= document.getElementById('out-stok-info')
+    sel.innerHTML = '<option value="">Auto (FIFO)</option>'
+
+    if (r.found) {
+      document.getElementById('out-nama').value = r.nama || ''
+      r.batches.filter(b => Number(b.qty) > 0).forEach(b => {
+        const opt = document.createElement('option')
+        opt.value = b.batch
+        opt.textContent = `${b.batch || 'default'} — stok: ${b.qty}${b.exp ? ' | exp: ' + b.exp : ''}`
+        sel.appendChild(opt)
+      })
+      info.style.display = ''
+      document.getElementById('out-stok-text').textContent =
+        `Total stok tersedia: ${r.qty} unit (${r.batches.length} batch)`
+    } else {
+      info.style.display = 'none'
+    }
+  }, 500)
+}
+
+function resetKeluar() {
+  ['out-barcode','out-nama','out-qty','out-catatan'].forEach(id => document.getElementById(id).value = '')
+  document.getElementById('out-batch').innerHTML = '<option value="">Auto (FIFO)</option>'
+  document.getElementById('out-stok-info').style.display = 'none'
+}
+
+async function submitKeluar() {
+  const barcode = document.getElementById('out-barcode').value.trim()
+  const qty     = document.getElementById('out-qty').value.trim()
+  if (!barcode || !qty || Number(qty) <= 0) { toast('Barcode dan qty (>0) wajib diisi', 'error'); return }
+
+  const btn = document.getElementById('btn-keluar')
+  btn.disabled = true
+  const data = {
+    action: 'stockOut',
+    barcode, qty: Number(qty),
+    batch:   document.getElementById('out-batch').value,
+    catatan: document.getElementById('out-catatan').value.trim(),
+    tanggal: document.getElementById('out-tanggal').value || new Date().toISOString(),
+  }
+
+  const r = await api('POST', data)
+  btn.disabled = false
+  if (r.success) { toast(`✓ Barang keluar disimpan (${qty} unit)`, 'success'); resetKeluar() }
+  else toast('Gagal: ' + (r.error || 'Unknown'), 'error')
+}
+
+// ============================================================
+// SEMUA STOK
+// ============================================================
+async function loadAllStock() {
+  const r = await api('GET', { action: 'getAllStock' })
+  if (r.error) { toast('Gagal memuat stok: ' + r.error, 'error'); return }
+  allStockData = r.items || []
+  document.getElementById('stok-count-label').textContent = `${allStockData.length} item terdaftar`
+
+  // Populate kategori filter
+  const cats = [...new Set(allStockData.map(i => i.kategori).filter(Boolean))].sort()
+  const sel  = document.getElementById('stok-kategori')
+  sel.innerHTML = '<option value="">Semua Kategori</option>'
+  cats.forEach(c => {
+    const o = document.createElement('option')
+    o.value = c; o.textContent = c
+    sel.appendChild(o)
+  })
+
+  stokPage = 1
+  renderStok()
+}
+
+function renderStok() {
+  const q       = document.getElementById('stok-search').value.toLowerCase()
+  const filter  = document.getElementById('stok-filter').value
+  const katFilt = document.getElementById('stok-kategori').value
+  const today   = new Date(); today.setHours(0,0,0,0)
+  const in30    = new Date(today); in30.setDate(today.getDate() + 30)
+
+  stokFiltered = allStockData.filter(item => {
+    const match = !q || item.nama.toLowerCase().includes(q) || item.barcode.toLowerCase().includes(q)
+    if (!match) return false
+    if (katFilt && item.kategori !== katFilt) return false
+    if (filter === 'low')     return Number(item.qty) <= 3
+    if (filter === 'expired') return item.exp && new Date(item.exp) < today
+    if (filter === 'exp')     return item.exp && new Date(item.exp) >= today && new Date(item.exp) <= in30
+    return true
+  })
+
+  renderStokPage()
+  renderPagination('stok-pagination', stokFiltered.length, stokPage, p => { stokPage = p; renderStokPage() })
+}
+
+function renderStokPage() {
+  const tbody = document.getElementById('stok-body')
+  const today  = new Date(); today.setHours(0,0,0,0)
+  const in30   = new Date(today); in30.setDate(today.getDate() + 30)
+
+  const start = (stokPage - 1) * PAGE_SIZE
+  const page  = stokFiltered.slice(start, start + PAGE_SIZE)
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <p>Tidak ada data ditemukan</p>
+    </div></td></tr>`
+    return
+  }
+
+  tbody.innerHTML = page.map(item => {
+    const qty = Number(item.qty)
+    const qtyBadge = qty <= 0 ? `<span class="badge badge-red">${qty}</span>`
+      : qty <= 3  ? `<span class="badge badge-red">${qty}</span>`
+      : qty <= 10 ? `<span class="badge badge-yellow">${qty}</span>`
+      : `<span class="badge badge-green">${qty}</span>`
+
+    let expBadge = '—'
+    if (item.exp) {
+      const expDate = new Date(item.exp)
+      if (expDate < today)      expBadge = `<span class="badge badge-gray">${item.exp}</span>`
+      else if (expDate <= in30) expBadge = `<span class="badge badge-yellow">${item.exp}</span>`
+      else                       expBadge = `<span class="text-muted">${item.exp}</span>`
+    }
+
+    const itemJson = JSON.stringify(item).replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+    return `<tr>
+      <td class="mono">${item.barcode}</td>
+      <td style="font-weight:500;color:var(--text)">${item.nama}</td>
+      <td>${qtyBadge}</td>
+      <td class="mono" style="font-size:11.5px">${item.batch || '—'}</td>
+      <td>${expBadge}</td>
+      <td class="text-muted">${item.posisi || '—'}</td>
+      <td>${item.kategori ? `<span class="badge badge-blue">${item.kategori}</span>` : '—'}</td>
+      <td>
+        <div class="flex gap-8">
+          <button class="btn btn-ghost btn-sm" onclick="openEdit(${itemJson})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="openDelete('${item.barcode}','${item.batch || ''}','${item.nama.replace(/'/g,"\\'")}')">Hapus</button>
+        </div>
+      </td>
+    </tr>`
+  }).join('')
+}
+
+// ============================================================
+// PAGINATION HELPER
+// ============================================================
+function renderPagination(containerId, total, currentPage, onPage) {
+  const container = document.getElementById(containerId)
+  const pages = Math.ceil(total / PAGE_SIZE)
+  if (pages <= 1) { container.innerHTML = ''; return }
+
+  let html = `<span>${(currentPage-1)*PAGE_SIZE+1}–${Math.min(currentPage*PAGE_SIZE,total)} dari ${total}</span>`
+  html += `<button ${currentPage===1?'disabled':''} onclick="(${onPage.toString()})(${currentPage-1})">‹ Prev</button>`
+
+  const delta = 2
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || (i >= currentPage - delta && i <= currentPage + delta)) {
+      html += `<button class="${i===currentPage?'active':''}" onclick="(${onPage.toString()})(${i})">${i}</button>`
+    } else if (i === currentPage - delta - 1 || i === currentPage + delta + 1) {
+      html += `<span>…</span>`
+    }
+  }
+  html += `<button ${currentPage===pages?'disabled':''} onclick="(${onPage.toString()})(${currentPage+1})">Next ›</button>`
+  container.innerHTML = html
+}
+
+// ============================================================
+// HISTORY
+// ============================================================
+async function loadHistory() {
+  const startDate = document.getElementById('hist-start').value
+  const endDate   = document.getElementById('hist-end').value
+  const params    = { action: 'getHistory' }
+  if (startDate) params.startDate = startDate
+  if (endDate)   params.endDate   = endDate
+
+  document.getElementById('hist-body').innerHTML =
+    `<tr><td colspan="7" class="text-center text-muted" style="padding:32px">
+      <div class="spinner" style="margin:0 auto 8px"></div><br>Memuat…
+    </td></tr>`
+
+  const r = await api('GET', params)
+  if (r.error) { toast('Gagal memuat riwayat: ' + r.error, 'error'); return }
+  allHistoryData = r.history || []
+  histPage = 1
+  renderHistory()
+}
+
+function renderHistory() {
+  const q      = document.getElementById('hist-search').value.toLowerCase()
+  const filter = document.getElementById('hist-filter').value
+
+  histFiltered = allHistoryData.filter(h => {
+    const match = !q || h.barcode.toLowerCase().includes(q) || h.nama.toLowerCase().includes(q)
+    if (!match) return false
+    if (filter && h.tipe !== filter) return false
+    return true
+  })
+
+  renderHistPage()
+  renderPagination('hist-pagination', histFiltered.length, histPage, p => { histPage = p; renderHistPage() })
+}
+
+function renderHistPage() {
+  const tbody = document.getElementById('hist-body')
+  const start = (histPage - 1) * PAGE_SIZE
+  const page  = histFiltered.slice(start, start + PAGE_SIZE)
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <p>Tidak ada riwayat ditemukan</p>
+    </div></td></tr>`
+    return
+  }
+
+  tbody.innerHTML = page.map(h => {
+    const d = h.tanggal ? new Date(h.tanggal).toLocaleString('id-ID', { dateStyle:'short', timeStyle:'short' }) : '—'
+    const badge = h.tipe === 'MASUK'
+      ? `<span class="badge badge-green">Masuk</span>`
+      : `<span class="badge badge-red">Keluar</span>`
+    return `<tr>
+      <td class="mono" style="font-size:11.5px;white-space:nowrap">${d}</td>
+      <td>${badge}</td>
+      <td class="mono">${h.barcode}</td>
+      <td style="color:var(--text)">${h.nama}</td>
+      <td class="mono" style="font-weight:600;color:${h.tipe==='MASUK'?'var(--green)':'var(--red)'}">${h.qty}</td>
+      <td class="mono" style="font-size:11.5px">${h.batch || '—'}</td>
+      <td class="text-muted" style="font-size:12px">${h.catatan || '—'}</td>
+    </tr>`
+  }).join('')
+}
+
+// ============================================================
+// EXPORT CSV
+// ============================================================
+function exportCSV(data, headers, filename) {
+  const rows = [headers, ...data]
+  const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url; a.download = filename; a.click()
+  URL.revokeObjectURL(url)
+}
+
+function exportHistory() {
+  if (!histFiltered.length) { toast('Tidak ada data untuk diekspor', 'error'); return }
+  exportCSV(
+    histFiltered.map(h => [h.tanggal, h.tipe, h.barcode, h.nama, h.qty, h.batch, h.catatan]),
+    ['Tanggal','Tipe','Barcode','Nama Barang','Qty','No. Batch','Catatan'],
+    `riwayat_${new Date().toISOString().slice(0,10)}.csv`
+  )
+}
+
+function exportStok() {
+  if (!stokFiltered.length) { toast('Tidak ada data untuk diekspor', 'error'); return }
+  exportCSV(
+    stokFiltered.map(i => [i.barcode, i.nama, i.qty, i.batch, i.exp, i.posisi, i.kategori]),
+    ['Barcode','Nama Barang','Stok','No. Batch','Kadaluarsa','Posisi Rak','Kategori'],
+    `stok_${new Date().toISOString().slice(0,10)}.csv`
+  )
+}
+
+// ============================================================
+// TAMBAH BARANG
+// ============================================================
+function resetTambah() {
+  ['add-barcode','add-nama','add-qty','add-batch','add-posisi','add-exp','add-kategori'].forEach(id => {
+    document.getElementById(id).value = ''
+  })
+}
+
+async function submitTambah() {
+  const barcode = document.getElementById('add-barcode').value.trim()
+  const nama    = document.getElementById('add-nama').value.trim()
+  if (!barcode || !nama) { toast('Barcode dan nama wajib diisi', 'error'); return }
+
+  const data = {
+    action:   'addItem',
+    barcode, nama,
+    qty:      Number(document.getElementById('add-qty').value) || 0,
+    batch:    document.getElementById('add-batch').value.trim(),
+    posisi:   document.getElementById('add-posisi').value.trim(),
+    exp:      document.getElementById('add-exp').value || '',
+    kategori: document.getElementById('add-kategori').value.trim(),
+  }
+
+  const r = await api('POST', data)
+  if (r.success) { toast('✓ Barang berhasil ditambahkan', 'success'); resetTambah() }
+  else toast('Gagal: ' + (r.error || 'Unknown'), 'error')
+}
+
+// ============================================================
+// EDIT ITEM
+// ============================================================
+function openEdit(item) {
+  document.getElementById('edit-barcode-orig').value = item.barcode
+  document.getElementById('edit-batch-orig').value   = item.batch || ''
+  document.getElementById('edit-barcode').value      = item.barcode
+  document.getElementById('edit-nama').value         = item.nama
+  document.getElementById('edit-stokawal').value     = item.stokAwal || 0
+  document.getElementById('edit-batch').value        = item.batch || ''
+  document.getElementById('edit-posisi').value       = item.posisi || ''
+  document.getElementById('edit-exp').value          = item.exp || ''
+  document.getElementById('edit-kategori').value     = item.kategori || ''
+  openModal('modal-edit')
+}
+
+async function submitEdit() {
+  const data = {
+    action:   'updateItem',
+    barcode:  document.getElementById('edit-barcode-orig').value,
+    nama:     document.getElementById('edit-nama').value.trim(),
+    stokAwal: Number(document.getElementById('edit-stokawal').value) || 0,
+    batch:    document.getElementById('edit-batch').value.trim(),
+    posisi:   document.getElementById('edit-posisi').value.trim(),
+    exp:      document.getElementById('edit-exp').value,
+    kategori: document.getElementById('edit-kategori').value.trim(),
+  }
+  const r = await api('POST', data)
+  if (r.success) {
+    toast('✓ Data berhasil diperbarui', 'success')
+    closeModal('modal-edit')
+    loadAllStock()
+  } else toast('Gagal: ' + (r.error || 'Unknown'), 'error')
+}
+
+// ============================================================
+// DELETE ITEM
+// ============================================================
+function openDelete(barcode, batch, nama) {
+  deleteTarget = { barcode, batch }
+  document.getElementById('delete-confirm-text').textContent =
+    `Yakin ingin menghapus "${nama}" (batch: ${batch || 'default'})? Aksi ini tidak dapat dibatalkan.`
+  openModal('modal-delete')
+}
+
+async function confirmDelete() {
+  if (!deleteTarget) return
+  const r = await api('POST', { action: 'deleteItem', ...deleteTarget })
+  if (r.success) {
+    toast('✓ Barang berhasil dihapus', 'success')
+    closeModal('modal-delete')
+    loadAllStock()
+    deleteTarget = null
+  } else toast('Gagal: ' + (r.error || 'Unknown'), 'error')
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+async function loadSettings() {
+  const r = await api('GET', { action: 'getSettings' })
+  if (r.error) return
+  if (r.telegramBotToken) document.getElementById('set-token').value  = r.telegramBotToken
+  if (r.telegramChatId)   document.getElementById('set-chatid').value = r.telegramChatId
+  if (r.telegramHour !== undefined) document.getElementById('set-hour').value = r.telegramHour
+  if (r.expDays !== null && r.expDays !== undefined) document.getElementById('set-expdays').value = r.expDays
+}
+
+async function saveSettings() {
+  const data = {
+    action:           'saveSettings',
+    telegramBotToken: document.getElementById('set-token').value.trim(),
+    telegramChatId:   document.getElementById('set-chatid').value.trim(),
+    telegramHour:     Number(document.getElementById('set-hour').value) || 7,
+    expDays:          Number(document.getElementById('set-expdays').value) || 30,
+  }
+  const r = await api('POST', data)
+  if (r.success) toast('✓ Pengaturan tersimpan', 'success')
+  else toast('Gagal: ' + (r.error || 'Unknown'), 'error')
+}
+
+async function sendWelcome() {
+  const r = await api('POST', { action: 'sendWelcomeMessage' })
+  if (r.success) toast('✓ Pesan test berhasil dikirim ke Telegram', 'success')
+  else toast('Gagal: ' + (r.error || 'Cek token dan chat ID'), 'error')
+}
+
+async function sendDailyReport() {
+  toast('Mengirim laporan…', 'info')
+  const r = await api('POST', { action: 'sendDailyReport' })
+  if (r.success) toast('✓ Laporan harian berhasil dikirim', 'success')
+  else toast('Gagal: ' + (r.error || 'Unknown'), 'error')
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  checkConn()
+  loadDashboard()
+  setInterval(checkConn, 30000) // Re-ping every 30s
+})
+</script>
+  <!-- script kamera lama dihapus, diganti cam-modal di bawah -->
+
+
+  <!-- CAMERA SCANNER MODAL -->
+  <div id="cam-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;flex-direction:column;">
+    <div style="background:#161B22;border-radius:14px;padding:16px;width:92%;max-width:380px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="color:#E6EDF3;font-weight:600;font-size:15px;">📷 Scan Barcode</span>
+        <button onclick="camClose()" style="background:#30363D;border:none;color:#E6EDF3;width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+      </div>
+      <div style="position:relative;background:#000;border-radius:8px;overflow:hidden;aspect-ratio:4/3;">
+        <video id="cam-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+        <canvas id="cam-canvas" style="display:none;"></canvas>
+        <!-- Garis scan animasi -->
+        <div style="position:absolute;inset:0;pointer-events:none;">
+          <div style="position:absolute;left:10%;right:10%;top:20%;bottom:20%;border:2px solid #58A6FF;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);"></div>
+          <div id="cam-line" style="position:absolute;left:10%;right:10%;top:20%;height:2px;background:linear-gradient(90deg,transparent,#58A6FF,transparent);animation:scanline 1.8s ease-in-out infinite;"></div>
+        </div>
+      </div>
+      <div id="cam-status" style="color:#8B949E;font-size:12px;text-align:center;margin:10px 0 4px;min-height:18px;"></div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button id="cam-flip" onclick="camFlip()" style="flex:1;background:#21262D;border:1px solid #30363D;color:#E6EDF3;padding:9px;border-radius:8px;cursor:pointer;font-size:13px;">🔄 Balik</button>
+        <button onclick="camClose()" style="flex:1;background:#21262D;border:1px solid #30363D;color:#E6EDF3;padding:9px;border-radius:8px;cursor:pointer;font-size:13px;">✕ Tutup</button>
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes scanline { 0%{top:22%} 50%{top:72%} 100%{top:22%} }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.2/umd/index.min.js"></script>
+  <script>
+  var _camStream = null, _camReader = null, _camInterval = null;
+  var _camTarget = 'scan-input', _camCb = null;
+  var _camFacing = 'environment';
+
+  function camOpen(targetId, cb) {
+    _camTarget = targetId || 'scan-input';
+    _camCb = cb || null;
+    document.getElementById('cam-modal').style.display = 'flex';
+    document.getElementById('cam-status').textContent = 'Memulai kamera...';
+    _camStart();
+  }
+
+  function openCamera() { camOpen('scan-input', function(){ doScan(); }); }
+  function openCameraFor(id, cb) { camOpen(id, cb); }
+
+  function camClose() {
+    document.getElementById('cam-modal').style.display = 'none';
+    _camStop();
+  }
+
+  function _camStop() {
+    if (_camInterval) { clearInterval(_camInterval); _camInterval = null; }
+    if (_camReader) { try { _camReader.reset(); } catch(e){} _camReader = null; }
+    if (_camStream) { _camStream.getTracks().forEach(function(t){ t.stop(); }); _camStream = null; }
+  }
+
+  function camFlip() {
+    _camFacing = _camFacing === 'environment' ? 'user' : 'environment';
+    _camStop();
+    _camStart();
+  }
+
+  async function _camStart() {
+    var status = document.getElementById('cam-status');
+    var video = document.getElementById('cam-video');
+    status.textContent = 'Memulai kamera...';
+    try {
+      var constraints = {
+        video: {
+          facingMode: { ideal: _camFacing },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+      var stream = await navigator.mediaDevices.getUserMedia(constraints);
+      _camStream = stream;
+      video.srcObject = stream;
+      video.setAttribute('playsinline', true);
+      video.setAttribute('muted', true);
+      await video.play();
+      status.textContent = 'Arahkan ke barcode...';
+      _camScanLoop();
+    } catch(err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        status.innerHTML = '⚠️ Izin kamera ditolak.<br>Buka <b>Pengaturan browser</b> → izinkan kamera untuk situs ini, lalu coba lagi.';
+      } else if (err.name === 'NotFoundError') {
+        status.textContent = '⚠️ Kamera tidak ditemukan di perangkat ini.';
+      } else if (err.name === 'NotReadableError') {
+        status.textContent = '⚠️ Kamera sedang digunakan aplikasi lain. Tutup aplikasi lain lalu coba.';
+      } else {
+        status.textContent = '⚠️ ' + (err.message || 'Kamera tidak tersedia.');
+      }
+    }
+  }
+
+  function _camScanLoop() {
+    var canvas = document.getElementById('cam-canvas');
+    var video = document.getElementById('cam-video');
+    var status = document.getElementById('cam-status');
+
+    // Coba BarcodeDetector API dulu (Chrome Android native - paling cepat)
+    if (window.BarcodeDetector) {
+      var detector = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e','itf','codabar','code_93','data_matrix','pdf417','aztec'] });
+      _camInterval = setInterval(async function() {
+        if (!_camStream || video.readyState < 2) return;
+        try {
+          var results = await detector.detect(video);
+          if (results && results.length > 0) {
+            _camOnResult(results[0].rawValue);
+          }
+        } catch(e) {}
+      }, 300);
+      status.textContent = '✅ Kamera aktif — arahkan ke barcode';
+      return;
+    }
+
+    // Fallback: ZXing library
+    if (window.ZXing) {
+      try {
+        _camReader = new ZXing.BrowserMultiFormatReader();
+        _camInterval = setInterval(function() {
+          if (!_camStream || video.readyState < 2) return;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0);
+          _camReader.decodeFromCanvas(canvas).then(function(r) {
+            if (r) _camOnResult(r.getText());
+          }).catch(function(){});
+        }, 400);
+        status.textContent = '✅ Kamera aktif — arahkan ke barcode';
+      } catch(e) {
+        status.textContent = 'Scanner siap — arahkan ke barcode';
+      }
+      return;
+    }
+
+    status.textContent = '⚠️ Library scanner tidak tersedia. Coba refresh halaman.';
+  }
+
+  function _camOnResult(code) {
+    if (!code) return;
+    camClose();
+    var el = document.getElementById(_camTarget);
+    if (el) { el.value = code; el.dispatchEvent(new Event('input')); }
+    if (_camCb) { try { _camCb(); } catch(e){} }
+    else { doScan(); }
+  }
+
+  // Tutup modal jika klik di luar
+  document.getElementById('cam-modal').addEventListener('click', function(e) {
+    if (e.target === this) camClose();
+  });
+  </script>
+
+</body>
+</html>
